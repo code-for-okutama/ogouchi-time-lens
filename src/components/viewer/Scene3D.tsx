@@ -104,6 +104,7 @@ export default function Scene3D({
   const { sensorData, startSensors } = useSensors();
   const terrainPosition = useTerrainPosition();
   const [manualHeadingOffset, setManualHeadingOffset] = useState(0);
+  const [manualPitchOffset, setManualPitchOffset] = useState(0);
   const [fov, setFov] = useState(DEFAULT_FOV);
   const [showDebug, setShowDebug] = useState(false);
   const { isDevMode } = useDevModeStore();
@@ -115,6 +116,8 @@ export default function Scene3D({
   const [isCalibrated, setIsCalibrated] = useState(false);
   // 3Dビュー内から再調整する場合のフラグ（手動モードで直接開始）
   const [isRecalibrating, setIsRecalibrating] = useState(false);
+  // D-padボタン押下中のみtrue（半透明フェードのトリガー）
+  const [isAdjustingAngle, setIsAdjustingAngle] = useState(false);
 
   const handleCameraError = useCallback(() => setIsCameraAvailable(false), []);
 
@@ -126,13 +129,13 @@ export default function Scene3D({
     }
     setIsCalibrated(true);
     setIsRecalibrating(false);
+    setIsAdjustingAngle(false);
   }, [isRecalibrating]);
 
   const [isControlsVisible] = useState(false); // デフォルトで非表示
   const [showCameraControls] = useState(false);
 
   const [cameraHeightOffset, setCameraHeightOffset] = useState(0);
-  const [heightAtFloor, setHeightAtFloor] = useState(false);
   const [actualCameraHeight, setActualCameraHeight] = useState<number | null>(null);
   // 地形モデル調整
   const [terrainOffsetX, setTerrainOffsetX] = useState(0);
@@ -402,15 +405,16 @@ export default function Scene3D({
           onCalibrationComplete={handleCalibrationComplete}
           onClose={() => {
             setIsRecalibrating(false);
+            setIsAdjustingAngle(false);
           }}
           initialOffset={manualHeadingOffset}
           orientation={sensorData.orientation}
           compassHeading={sensorData.compassHeading}
           startInManualMode
           onOffsetChange={(offset) => setManualHeadingOffset(offset)}
-          initialHeightOffset={cameraHeightOffset}
-          onHeightOffsetChange={(offset) => setCameraHeightOffset(offset)}
-          heightAtFloor={heightAtFloor}
+          initialPitchOffset={manualPitchOffset}
+          onPitchOffsetChange={(offset) => setManualPitchOffset(offset)}
+          onAdjustingChange={setIsAdjustingAngle}
         />
       )}
 
@@ -440,7 +444,6 @@ export default function Scene3D({
               // 少し遅延させてからReadyにする（描画安定待ち）
               setTimeout(() => setIsReady(true), 500);
             }}
-            onHeightAtFloor={setHeightAtFloor}
           />
           {/* PC用キーボード移動コントロール（OrbitControls使用時は無効） */}
           {/* {!isMobile && <PCKeyboardControls />} */}
@@ -452,6 +455,8 @@ export default function Scene3D({
               arMode={true}
               manualHeadingOffset={manualHeadingOffset}
               baseHeadingOffset={baseHeadingOffset}
+              manualPitchOffset={manualPitchOffset}
+              isAdjusting={isAdjustingAngle}
             />
           )}
 
@@ -512,7 +517,7 @@ export default function Scene3D({
             })()}
             hiddenObjects={stableFbxHiddenObjects}
             onObjectsLoaded={handleFbxObjectsLoaded}
-            opacity={isRecalibrating && isArBackgroundActive && isCameraAvailable && isMobile ? CALIBRATION_MODEL_OPACITY : 1}
+            opacity={isAdjustingAngle && isArBackgroundActive && isCameraAvailable && isMobile ? CALIBRATION_MODEL_OPACITY : 1}
           />
 
           {/* 2Dマップ上のピン位置を3Dビューに表示 */}
