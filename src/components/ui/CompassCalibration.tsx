@@ -17,12 +17,10 @@ interface CompassCalibrationProps {
     startInManualMode?: boolean;
     /** スライダー操作時にリアルタイムでオフセットを通知するコールバック */
     onOffsetChange?: (offset: number) => void;
-    /** 高さオフセット初期値 */
-    initialHeightOffset?: number;
-    /** 高さスライダー操作時にリアルタイムで通知するコールバック */
-    onHeightOffsetChange?: (offset: number) => void;
-    /** 高さが下限に達しているか */
-    heightAtFloor?: boolean;
+    /** ピッチオフセット初期値（度） */
+    initialPitchOffset?: number;
+    /** ピッチ操作時にリアルタイムで通知するコールバック */
+    onPitchOffsetChange?: (offset: number) => void;
 }
 
 type CalibrationStep = 'intro' | 'horizontal' | 'manual' | 'complete';
@@ -36,15 +34,14 @@ export default function CompassCalibration({
     allowManualAdjustment = true,
     startInManualMode = false,
     onOffsetChange,
-    initialHeightOffset = 0,
-    onHeightOffsetChange,
-    heightAtFloor = false,
+    initialPitchOffset = 0,
+    onPitchOffsetChange,
 }: CompassCalibrationProps) {
     // const { sensorData } = useSensors(); // 親からデータを受け取るため削除
     const [step, setStep] = useState<CalibrationStep>(startInManualMode ? 'manual' : 'horizontal');
     const [manualDrawerOpen, setManualDrawerOpen] = useState(true);
     const [manualOffset, setManualOffset] = useState(initialOffset);
-    const [heightOffset, setHeightOffset] = useState(initialHeightOffset);
+    const [pitchOffset, setPitchOffset] = useState(initialPitchOffset);
     const [isHorizontal, setIsHorizontal] = useState(false);
     const [stabilityProgress, setStabilityProgress] = useState(0);
 
@@ -181,13 +178,15 @@ export default function CompassCalibration({
         });
     }, [onOffsetChange]);
 
-    const adjustHeight = useCallback((delta: number) => {
-        setHeightOffset(prev => {
-            const next = Math.max(-200, Math.min(200, prev + delta));
-            onHeightOffsetChange?.(next);
+    const PITCH_MAX = 30; // ピッチ調整の最大値（度）
+
+    const adjustPitch = useCallback((delta: number) => {
+        setPitchOffset(prev => {
+            const next = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, prev + delta));
+            onPitchOffsetChange?.(next);
             return next;
         });
-    }, [onHeightOffsetChange]);
+    }, [onPitchOffsetChange]);
 
     const dismissManual = useCallback(() => {
         // まずDrawerを閉じ、アニメーション完了後にコールバック
@@ -233,7 +232,7 @@ export default function CompassCalibration({
                     onCloseAutoFocus={(e: Event) => e.preventDefault()}
                 >
                     <VDrawer.Title style={{ display: 'none' }}>手動調整</VDrawer.Title>
-                    <VDrawer.Description style={{ display: 'none' }}>方位と高さを手動で調整します。</VDrawer.Description>
+                    <VDrawer.Description style={{ display: 'none' }}>方位と角度を手動で調整します。</VDrawer.Description>
 
                     <div
                         style={{
@@ -255,7 +254,7 @@ export default function CompassCalibration({
                         </p>
 
                         {/* D-pad コントローラー */}
-                        <div data-vaul-no-drag style={{ position: 'relative', height: 56, marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div data-vaul-no-drag style={{ position: 'relative', height: 160, marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             {/* 左ボタン（方位-） */}
                             <button
                                 type="button"
@@ -273,45 +272,58 @@ export default function CompassCalibration({
                                 <FaChevronLeft size={20} />
                             </button>
 
-                            {/* 上ボタン（高さ+） */}
-                            <button
-                                type="button"
-                                onPointerDown={() => startHold(() => adjustHeight(2))}
-                                onPointerUp={stopHold}
-                                onPointerLeave={stopHold}
-                                onContextMenu={(e) => e.preventDefault()}
-                                style={{
-                                    position: 'absolute', left: '50%', top: -14, transform: 'translateX(-50%)',
-                                    width: 36, height: 36, minHeight: 0, padding: 0, borderRadius: '50%',
-                                    backgroundColor: 'rgba(255,255,255,0.1)', border: '2px solid rgba(255,255,255,0.25)',
-                                    color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer', touchAction: 'none', zIndex: 1,
-                                }}
-                            >
-                                <FaChevronUp size={12} />
-                            </button>
+                            {/* 上ボタン（見上げ）・中央「調整完了」・下ボタン（見下げ）の縦並び */}
+                            <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, top: 0, bottom: 0, justifyContent: 'space-between' }}>
+                                {/* 上ボタン（見上げ） */}
+                                <button
+                                    type="button"
+                                    onPointerDown={() => startHold(() => adjustPitch(2))}
+                                    onPointerUp={stopHold}
+                                    onPointerLeave={stopHold}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                    style={{
+                                        width: 44, height: 44, minHeight: 0, padding: 0, borderRadius: '50%',
+                                        backgroundColor: 'rgba(255,255,255,0.1)', border: '2px solid rgba(255,255,255,0.25)',
+                                        color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', touchAction: 'none',
+                                    }}
+                                >
+                                    <FaChevronUp size={16} />
+                                </button>
 
-                            {/* 下ボタン（高さ-） */}
-                            <button
-                                type="button"
-                                onPointerDown={() => { if (!heightAtFloor) startHold(() => adjustHeight(-2)); }}
-                                onPointerUp={stopHold}
-                                onPointerLeave={stopHold}
-                                onContextMenu={(e) => e.preventDefault()}
-                                style={{
-                                    position: 'absolute', left: '50%', bottom: -14, transform: 'translateX(-50%)',
-                                    width: 36, height: 36, minHeight: 0, padding: 0, borderRadius: '50%',
-                                    backgroundColor: heightAtFloor ? 'rgba(255,80,80,0.15)' : 'rgba(255,255,255,0.1)',
-                                    border: `2px solid ${heightAtFloor ? 'rgba(255,80,80,0.4)' : 'rgba(255,255,255,0.25)'}`,
-                                    color: heightAtFloor ? 'rgba(255,80,80,0.5)' : 'rgba(255,255,255,0.7)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: heightAtFloor ? 'not-allowed' : 'pointer', touchAction: 'none', zIndex: 1,
-                                }}
-                            >
-                                <FaChevronDown size={12} />
-                            </button>
+                                {/* 調整完了ボタン */}
+                                <button
+                                    type="button"
+                                    onClick={dismissManual}
+                                    style={{
+                                        minHeight: 0, padding: '10px 20px', borderRadius: 24,
+                                        backgroundColor: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.4)',
+                                        color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', fontWeight: 'bold',
+                                        cursor: 'pointer', whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    調整完了
+                                </button>
 
-                            {/* 右ボタン（方位-） */}
+                                {/* 下ボタン（見下げ） */}
+                                <button
+                                    type="button"
+                                    onPointerDown={() => startHold(() => adjustPitch(-2))}
+                                    onPointerUp={stopHold}
+                                    onPointerLeave={stopHold}
+                                    onContextMenu={(e) => e.preventDefault()}
+                                    style={{
+                                        width: 44, height: 44, minHeight: 0, padding: 0, borderRadius: '50%',
+                                        backgroundColor: 'rgba(255,255,255,0.1)', border: '2px solid rgba(255,255,255,0.25)',
+                                        color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        cursor: 'pointer', touchAction: 'none',
+                                    }}
+                                >
+                                    <FaChevronDown size={16} />
+                                </button>
+                            </div>
+
+                            {/* 右ボタン（方位+） */}
                             <button
                                 type="button"
                                 onPointerDown={() => startHold(() => adjustHeading(-2))}
@@ -332,12 +344,12 @@ export default function CompassCalibration({
                         {/* 補正値 + リセット */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
                             <span>方位 {manualOffset}°</span>
-                            <span>高さ {heightOffset > 0 ? `+${heightOffset}` : heightOffset}m</span>
+                            <span>角度 {pitchOffset > 0 ? `+${pitchOffset}` : pitchOffset}°</span>
                             <button
                                 type="button"
                                 onClick={() => {
                                     setManualOffset(0); onOffsetChange?.(0);
-                                    setHeightOffset(0); onHeightOffsetChange?.(0);
+                                    setPitchOffset(0); onPitchOffsetChange?.(0);
                                 }}
                                 style={{
                                     background: 'none', backgroundColor: 'transparent', border: 'none', minHeight: 0, padding: '2px 6px',

@@ -10,7 +10,12 @@ interface OrientationCameraProps {
   arMode?: boolean; // ARモード：背面カメラ補正を含む
   manualHeadingOffset?: number; // 手動補正（度数法）
   baseHeadingOffset?: number; // キャリブレーションで算出した alpha→真北 の補正値（度数法）
+  manualPitchOffset?: number; // 手動ピッチ補正（度数法）: 正=見上げ方向
 }
+
+// 上ボタンで見上げる方向になるよう符号を調整する定数。
+// 実機で逆になる場合は -1 に変更する。
+const PITCH_SIGN = -1;
 
 export default function OrientationCamera({
   deviceOrientation,
@@ -19,6 +24,7 @@ export default function OrientationCamera({
   arMode = false,
   manualHeadingOffset = 0,
   baseHeadingOffset = 0,
+  manualPitchOffset = 0,
 }: OrientationCameraProps) {
   const { camera } = useThree();
 
@@ -64,7 +70,7 @@ export default function OrientationCamera({
     // manualHeadingOffset: ユーザー手動微調整
     const alphaRad = THREE.MathUtils.degToRad(alpha + baseHeadingOffset + manualHeadingOffset);
 
-    const betaRad = THREE.MathUtils.degToRad(beta);
+    const betaRad = THREE.MathUtils.degToRad(beta + PITCH_SIGN * manualPitchOffset);
     const gammaRad = THREE.MathUtils.degToRad(gamma);
     const orientRad = screenOrientation.current;
 
