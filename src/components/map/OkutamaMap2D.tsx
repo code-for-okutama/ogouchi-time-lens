@@ -305,7 +305,7 @@ export default function OkutamaMap2D({
   // Devモード状態
   const { isDevMode } = useDevModeStore();
   // 段階的パーミッションステップ管理
-  type PermissionStep = 'check' | 'location' | 'heading' | 'outside' | 'done';
+  type PermissionStep = 'check' | 'location' | 'locating' | 'heading' | 'outside' | 'done';
   const [permissionStep, setPermissionStep] = useState<PermissionStep>('check');
   // エリア外かどうか (null = まだGPS未取得で未判定)
   const [isOutsideArea, setIsOutsideArea] = useState<boolean | null>(null);
@@ -558,7 +558,8 @@ export default function OkutamaMap2D({
       if (gpsPermission === 'granted') {
         startSensors();
         if (needsHeadingPrompt) {
-          setPermissionStep('heading');
+          // GPS はすでに流れているのでエリア判定を待ってから heading へ
+          setPermissionStep('locating');
         } else {
           setPermissionStep('done');
         }
@@ -585,19 +586,15 @@ export default function OkutamaMap2D({
 
   // Step 1: 位置情報の許可ボタン押下（GPSのみ開始、方位・モーションは触らない）
   const handleLocationPermissionRequest = useCallback(async () => {
-    // GPSだけを開始（startSensorsは方位やモーションも開始してOSプロンプトが出るため直接呼ぶ）
-    // useSensorsのGPSコールバックは後のステップでstartSensors経由で接続される
-    if (sensorManager.locationService.isAvailable()) {
-      sensorManager.locationService.startWatching(() => {});
-    }
-
     const orientationState = sensorManager.orientationService.getPermissionState();
     const isIOS =
       typeof window.DeviceOrientationEvent !== 'undefined' &&
       typeof (window.DeviceOrientationEvent as any).requestPermission === 'function';
     const needsHeadingPrompt = isIOS && orientationState !== 'granted';
     if (needsHeadingPrompt) {
-      setPermissionStep('heading');
+      // iOSで方位未許可: OSプロンプトなしでGPSだけ開始し、エリア判定を待つ
+      startSensors(false, false);
+      setPermissionStep('locating');
     } else {
       // 非iOS or 方位既許可 → 全センサーを開始（非iOSではOSプロンプトなし）
       startSensors(false, true);
@@ -666,6 +663,28 @@ export default function OkutamaMap2D({
       setPermissionStep('outside');
     }
   }, [isOutsideArea, permissionStep]);
+
+  // locating: GPS初回測位でエリア判定が確定したら分岐
+  // エリア外 → outside、エリア内 → heading（方位許可へ）
+  useEffect(() => {
+    if (permissionStep !== 'locating') return;
+    if (isOutsideArea === null) return; // GPS未取得のため待機継続
+    if (isOutsideArea) {
+      hasShownOutsideModalRef.current = true;
+      setPermissionStep('outside');
+    } else {
+      setPermissionStep('heading');
+    }
+  }, [permissionStep, isOutsideArea]);
+
+  // locating タイムアウト: GPSエラー等で測位できない場合に heading へフォールバック
+  useEffect(() => {
+    if (permissionStep !== 'locating') return;
+    const timer = setTimeout(() => {
+      setPermissionStep((s) => (s === 'locating' ? 'heading' : s));
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [permissionStep]);
   // public配下のタイルは Vite の base に追従して配信される
   const tilesBase = import.meta.env.BASE_URL || '/';
   const localTilesUrl = `${tilesBase}tiles/{z}/{x}/{y}.png`;
@@ -877,6 +896,42 @@ export default function OkutamaMap2D({
             >
               許可する
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 1.5: 現在地確認中モーダル（iOSで方位許可が必要な場合にGPS測位を待つ） */}
+      {permissionStep === 'locating' && (
+        <div
+          aria-labelledby="locating-modal-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 30000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: 16,
+              padding: '32px 28px 24px',
+              maxWidth: 'min(380px, 88vw)',
+              boxShadow: '0 24px 48px rgba(0, 0, 0, 0.2)',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ marginBottom: 12 }}><FaMapMarkerAlt size={32} color="#3b82f6" /></div>
+            <h3 id="locating-modal-title" style={{ margin: '0 0 12px', fontSize: '17px', fontWeight: 700, color: '#111827', lineHeight: 1.4 }}>
+              現在地を確認中…
+            </h3>
+            <p style={{ margin: 0, fontSize: '14px', color: '#6b7280', lineHeight: 1.7 }}>
+              GPS信号を受信しています。しばらくお待ちください。
+            </p>
           </div>
         </div>
       )}
