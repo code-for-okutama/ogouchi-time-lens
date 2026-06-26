@@ -188,9 +188,9 @@ const CurrentLocationMarker = ({
             "
           >
             <defs>
-              <radialGradient id="${gradId}" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                <stop offset="0%" stop-color="#4285F4" stop-opacity="0.35" />
-                <stop offset="100%" stop-color="#4285F4" stop-opacity="0.03" />
+              <radialGradient id="${gradId}" gradientUnits="userSpaceOnUse" cx="${cx}" cy="${cy}" r="${r}">
+                <stop offset="0%" stop-color="#4285F4" stop-opacity="0.5" />
+                <stop offset="100%" stop-color="#4285F4" stop-opacity="0.0" />
               </radialGradient>
             </defs>
             <!-- 視野の扇形（方位連動） -->
@@ -288,7 +288,7 @@ export default function OkutamaMap2D({
   onDeselectPin: propOnDeselectPin,
 }: OkutamaMap2DProps) {
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
-  const [sheetMode, setSheetMode] = useState<'pin-list' | 'pin-detail'>('pin-list');
+  const [, setSheetMode] = useState<'pin-list' | 'pin-detail'>('pin-list');
   const [imageOverlayOpen, setImageOverlayOpen] = useState(false);
   const pinClickGuardRef = useRef(false);
   // propsから選択ピンを取得、なければローカルstateを使用
@@ -1137,30 +1137,6 @@ export default function OkutamaMap2D({
 
       </div>
 
-      {/* 画面中央：中抜き十字マーク（記事表示中はフェードアウト） */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '30px',
-          height: '30px',
-          zIndex: 10000,
-          pointerEvents: 'none',
-          opacity: (sheetOpen && sheetMode === 'pin-detail') ? 0 : 1,
-          transition: 'opacity 0.5s ease',
-        }}
-      >
-        {/* 上 */}
-        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '2px', height: '10px', backgroundColor: 'rgba(128,128,128,0.7)', }} />
-        {/* 下 */}
-        <div style={{ position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '2px', height: '10px', backgroundColor: 'rgba(128,128,128,0.7)', }} />
-        {/* 左 */}
-        <div style={{ position: 'absolute', top: '50%', left: 0, transform: 'translateY(-50%)', width: '10px', height: '2px', backgroundColor: 'rgba(128,128,128,0.7)', }} />
-        {/* 右 */}
-        <div style={{ position: 'absolute', top: '50%', right: 0, transform: 'translateY(-50%)', width: '10px', height: '2px', backgroundColor: 'rgba(128,128,128,0.7)', }} />
-      </div>
 
       {/* 左下：ピン一覧（アイコン） */}
       <div
