@@ -21,6 +21,8 @@ interface CompassCalibrationProps {
     initialPitchOffset?: number;
     /** ピッチ操作時にリアルタイムで通知するコールバック */
     onPitchOffsetChange?: (offset: number) => void;
+    /** ボタン押下中（調整中）かどうかを通知するコールバック */
+    onAdjustingChange?: (adjusting: boolean) => void;
 }
 
 type CalibrationStep = 'intro' | 'horizontal' | 'manual' | 'complete';
@@ -36,6 +38,7 @@ export default function CompassCalibration({
     onOffsetChange,
     initialPitchOffset = 0,
     onPitchOffsetChange,
+    onAdjustingChange,
 }: CompassCalibrationProps) {
     // const { sensorData } = useSensors(); // 親からデータを受け取るため削除
     const [step, setStep] = useState<CalibrationStep>(startInManualMode ? 'manual' : 'horizontal');
@@ -157,15 +160,17 @@ export default function CompassCalibration({
             clearInterval(holdIntervalRef.current);
             holdIntervalRef.current = null;
         }
-    }, []);
+        onAdjustingChange?.(false);
+    }, [onAdjustingChange]);
 
     // クリーンアップ
     useEffect(() => stopHold, [stopHold]);
 
     const startHold = useCallback((action: () => void) => {
+        onAdjustingChange?.(true);
         action(); // 即座に1回実行
         holdIntervalRef.current = setInterval(action, 80);
-    }, []);
+    }, [onAdjustingChange]);
 
     const adjustHeading = useCallback((delta: number) => {
         setManualOffset(prev => {
@@ -261,6 +266,7 @@ export default function CompassCalibration({
                                 onPointerDown={() => startHold(() => adjustHeading(2))}
                                 onPointerUp={stopHold}
                                 onPointerLeave={stopHold}
+                                onPointerCancel={stopHold}
                                 onContextMenu={(e) => e.preventDefault()}
                                 style={{
                                     width: 56, height: 56, minHeight: 0, padding: 0, borderRadius: '50%',
@@ -280,6 +286,7 @@ export default function CompassCalibration({
                                     onPointerDown={() => startHold(() => adjustPitch(2))}
                                     onPointerUp={stopHold}
                                     onPointerLeave={stopHold}
+                                    onPointerCancel={stopHold}
                                     onContextMenu={(e) => e.preventDefault()}
                                     style={{
                                         width: 56, height: 56, minHeight: 0, padding: 0, borderRadius: '50%',
@@ -311,6 +318,7 @@ export default function CompassCalibration({
                                     onPointerDown={() => startHold(() => adjustPitch(-2))}
                                     onPointerUp={stopHold}
                                     onPointerLeave={stopHold}
+                                    onPointerCancel={stopHold}
                                     onContextMenu={(e) => e.preventDefault()}
                                     style={{
                                         width: 56, height: 56, minHeight: 0, padding: 0, borderRadius: '50%',
@@ -329,6 +337,7 @@ export default function CompassCalibration({
                                 onPointerDown={() => startHold(() => adjustHeading(-2))}
                                 onPointerUp={stopHold}
                                 onPointerLeave={stopHold}
+                                onPointerCancel={stopHold}
                                 onContextMenu={(e) => e.preventDefault()}
                                 style={{
                                     width: 56, height: 56, minHeight: 0, padding: 0, borderRadius: '50%',

@@ -1,6 +1,7 @@
 
 import type React from 'react';
 import { useEffect, useState, useRef, memo, useMemo, useCallback } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import * as THREE from 'three';
 import { FBX_NORMALIZATION_TARGET } from '../../config/terrain-config';
@@ -279,9 +280,18 @@ export function LakeModel({
         // ジオメトリとマテリアルも深くクローンしてdisposeの影響を遮断
         cloned.geometry = srcMesh.geometry.clone();
         if (Array.isArray(srcMesh.material)) {
-          cloned.material = srcMesh.material.map(m => m.clone());
+          cloned.material = srcMesh.material.map(m => {
+            const mat = m.clone();
+            // 通常マテリアルはtransparentを事前に有効化（フェード時に毎フレーム設定しないため）
+            if (!(mat instanceof THREE.ShaderMaterial)) mat.transparent = true;
+            return mat;
+          });
         } else {
           cloned.material = srcMesh.material.clone();
+          // 通常マテリアルはtransparentを事前に有効化
+          if (!(cloned.material instanceof THREE.ShaderMaterial)) {
+            (cloned.material as THREE.Material).transparent = true;
+          }
         }
         meshes.push({ name: child.name, object: cloned });
         names.push(child.name);
@@ -308,25 +318,61 @@ export function LakeModel({
     updateVisibility();
   }, [hiddenObjects, updateVisibility]);
 
-  // opacity変更時に全メッシュのマテリアルに反映
+  // フェードアニメーション用ref
+  const currentOpacityRef = useRef(opacity);
+  const fromOpacityRef = useRef(opacity);
+  const targetOpacityRef = useRef(opacity);
+  const elapsedRef = useRef(0);
+  // 方向によってフェード時間を変える: 半透明化0.5秒、不透明化0.2秒
+  const fadeDurationRef = useRef(0.5);
+
+  // opacity propが変わったらアニメーション開始（値の即時適用はuseFrameに任せる）
   useEffect(() => {
+    fromOpacityRef.current = currentOpacityRef.current;
+    targetOpacityRef.current = opacity;
+    elapsedRef.current = 0;
+    fadeDurationRef.current = opacity >= currentOpacityRef.current ? 0.2 : 0.5;
+  }, [opacity]);
+
+  // 全メッシュのマテリアルに透明度を書き込む（フレームループから呼ぶためneedsUpdate不使用）
+  const applyOpacity = useCallback((v: number) => {
     for (const { object } of clonedMeshes) {
       object.traverse((child: THREE.Object3D) => {
         if (!(child instanceof THREE.Mesh) || !child.material) return;
         const materials = Array.isArray(child.material) ? child.material : [child.material];
         for (const mat of materials) {
           if (mat instanceof THREE.ShaderMaterial && mat.uniforms.uOpacity) {
-            // カスタムシェーダー（地形スプラットマテリアル）
-            mat.uniforms.uOpacity.value = opacity;
+            // カスタムシェーダー（地形スプラットマテリアル）: 値のみ更新
+            mat.uniforms.uOpacity.value = v;
           } else {
-            mat.transparent = true;
-            mat.opacity = opacity;
+            // 通常マテリアル: transparentは初回ロード時に設定済み
+            mat.opacity = v;
           }
-          mat.needsUpdate = true;
+          // needsUpdate はシェーダー再コンパイルを誘発するためフレームループ内では呼ばない
         }
       });
     }
-  }, [opacity, clonedMeshes]);
+  }, [clonedMeshes]);
+
+  // 0.5秒かけてopacityをフェード（progress-based lerp）
+  useFrame((_, delta) => {
+    const current = currentOpacityRef.current;
+    const target = targetOpacityRef.current;
+    if (Math.abs(current - target) < 0.001) return;
+
+    elapsedRef.current += delta;
+    const rawT = Math.min(1, elapsedRef.current / fadeDurationRef.current);
+    // smoothstep: 0.5秒で滑らかに完了
+    const t = rawT * rawT * (3 - 2 * rawT);
+    const v = THREE.MathUtils.lerp(fromOpacityRef.current, target, t);
+
+    currentOpacityRef.current = v;
+    applyOpacity(v);
+
+    if (rawT >= 1) {
+      currentOpacityRef.current = target;
+    }
+  });
 
   if (error) {
     return (

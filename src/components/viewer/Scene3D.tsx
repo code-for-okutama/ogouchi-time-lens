@@ -116,6 +116,8 @@ export default function Scene3D({
   const [isCalibrated, setIsCalibrated] = useState(false);
   // 3Dビュー内から再調整する場合のフラグ（手動モードで直接開始）
   const [isRecalibrating, setIsRecalibrating] = useState(false);
+  // D-padボタン押下中のみtrue（半透明フェードのトリガー）
+  const [isAdjustingAngle, setIsAdjustingAngle] = useState(false);
 
   const handleCameraError = useCallback(() => setIsCameraAvailable(false), []);
 
@@ -127,6 +129,7 @@ export default function Scene3D({
     }
     setIsCalibrated(true);
     setIsRecalibrating(false);
+    setIsAdjustingAngle(false);
   }, [isRecalibrating]);
 
   const [isControlsVisible] = useState(false); // デフォルトで非表示
@@ -402,6 +405,7 @@ export default function Scene3D({
           onCalibrationComplete={handleCalibrationComplete}
           onClose={() => {
             setIsRecalibrating(false);
+            setIsAdjustingAngle(false);
           }}
           initialOffset={manualHeadingOffset}
           orientation={sensorData.orientation}
@@ -410,6 +414,7 @@ export default function Scene3D({
           onOffsetChange={(offset) => setManualHeadingOffset(offset)}
           initialPitchOffset={manualPitchOffset}
           onPitchOffsetChange={(offset) => setManualPitchOffset(offset)}
+          onAdjustingChange={setIsAdjustingAngle}
         />
       )}
 
@@ -511,7 +516,7 @@ export default function Scene3D({
             })()}
             hiddenObjects={stableFbxHiddenObjects}
             onObjectsLoaded={handleFbxObjectsLoaded}
-            opacity={isRecalibrating && isArBackgroundActive && isCameraAvailable && isMobile ? CALIBRATION_MODEL_OPACITY : 1}
+            opacity={isAdjustingAngle && isArBackgroundActive && isCameraAvailable && isMobile ? CALIBRATION_MODEL_OPACITY : 1}
           />
 
           {/* 2Dマップ上のピン位置を3Dビューに表示 */}
