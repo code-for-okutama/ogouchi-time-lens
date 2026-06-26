@@ -254,7 +254,7 @@ export default function CompassCalibration({
                         </p>
 
                         {/* D-pad コントローラー */}
-                        <div data-vaul-no-drag style={{ position: 'relative', height: 160, marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div data-vaul-no-drag style={{ position: 'relative', height: 200, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             {/* 左ボタン（方位-） */}
                             <button
                                 type="button"
@@ -341,10 +341,12 @@ export default function CompassCalibration({
                             </button>
                         </div>
 
-                        {/* 補正値 + リセット */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
-                            <span>方位 {manualOffset}°</span>
-                            <span>角度 {pitchOffset > 0 ? `+${pitchOffset}` : pitchOffset}°</span>
+                        {/* 補正値（左下）+ リセット（右下） */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                            <div style={{ display: 'flex', gap: '12px', color: 'rgba(255,255,255,0.5)' }}>
+                                <span>方位 {manualOffset}°</span>
+                                <span>角度 {pitchOffset > 0 ? `+${pitchOffset}` : pitchOffset}°</span>
+                            </div>
                             <button
                                 type="button"
                                 onClick={() => {
@@ -353,7 +355,7 @@ export default function CompassCalibration({
                                 }}
                                 style={{
                                     background: 'none', backgroundColor: 'transparent', border: 'none', minHeight: 0, padding: '2px 6px',
-                                    color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: '0.7rem', textDecoration: 'underline',
+                                    color: 'rgba(255,80,80,0.8)', cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline',
                                 }}
                             >
                                 リセット
