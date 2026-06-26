@@ -240,21 +240,21 @@ export default function CompassCalibration({
                             backdropFilter: 'blur(10px)',
                             borderTopLeftRadius: 16,
                             borderTopRightRadius: 16,
-                            padding: '0 20px 40px',
+                            padding: '0 20px 12px',
                             color: 'white',
                         }}
                     >
                         {/* ドラッグハンドル */}
-                        <div style={{ padding: '12px 0 10px', display: 'flex', justifyContent: 'center' }}>
+                        <div style={{ padding: '8px 0 6px', display: 'flex', justifyContent: 'center' }}>
                             <div data-vaul-handle style={{ background: 'rgba(255,255,255,0.3)' }} />
                         </div>
 
-                        <p style={{ fontSize: '0.85rem', textAlign: 'center', color: 'rgba(255,255,255,0.6)', margin: '0 0 20px' }}>
+                        <p style={{ fontSize: '0.85rem', textAlign: 'center', color: 'rgba(255,255,255,0.6)', margin: '0 0 10px' }}>
                             カメラ画面と山を重ねてみよう
                         </p>
 
                         {/* D-pad コントローラー */}
-                        <div data-vaul-no-drag style={{ position: 'relative', height: 200, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div data-vaul-no-drag style={{ position: 'relative', height: 160, marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             {/* 左ボタン（方位-） */}
                             <button
                                 type="button"
@@ -273,7 +273,7 @@ export default function CompassCalibration({
                             </button>
 
                             {/* 上ボタン（見上げ）・中央「調整完了」・下ボタン（見下げ）の縦並び */}
-                            <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, top: 0, bottom: 0, justifyContent: 'space-between' }}>
+                            <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, justifyContent: 'center', top: 0, bottom: 0 }}>
                                 {/* 上ボタン（見上げ） */}
                                 <button
                                     type="button"
@@ -282,13 +282,13 @@ export default function CompassCalibration({
                                     onPointerLeave={stopHold}
                                     onContextMenu={(e) => e.preventDefault()}
                                     style={{
-                                        width: 44, height: 44, minHeight: 0, padding: 0, borderRadius: '50%',
+                                        width: 56, height: 56, minHeight: 0, padding: 0, borderRadius: '50%',
                                         backgroundColor: 'rgba(255,255,255,0.1)', border: '2px solid rgba(255,255,255,0.25)',
                                         color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         cursor: 'pointer', touchAction: 'none',
                                     }}
                                 >
-                                    <FaChevronUp size={16} />
+                                    <FaChevronUp size={20} />
                                 </button>
 
                                 {/* 調整完了ボタン */}
@@ -313,13 +313,13 @@ export default function CompassCalibration({
                                     onPointerLeave={stopHold}
                                     onContextMenu={(e) => e.preventDefault()}
                                     style={{
-                                        width: 44, height: 44, minHeight: 0, padding: 0, borderRadius: '50%',
+                                        width: 56, height: 56, minHeight: 0, padding: 0, borderRadius: '50%',
                                         backgroundColor: 'rgba(255,255,255,0.1)', border: '2px solid rgba(255,255,255,0.25)',
                                         color: 'rgba(255,255,255,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         cursor: 'pointer', touchAction: 'none',
                                     }}
                                 >
-                                    <FaChevronDown size={16} />
+                                    <FaChevronDown size={20} />
                                 </button>
                             </div>
 
