@@ -456,6 +456,7 @@ export default function Scene3D({
               manualHeadingOffset={manualHeadingOffset}
               baseHeadingOffset={baseHeadingOffset}
               manualPitchOffset={manualPitchOffset}
+              isAdjusting={isAdjustingAngle}
             />
           )}
 

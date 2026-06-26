@@ -11,11 +11,19 @@ interface OrientationCameraProps {
   manualHeadingOffset?: number; // 手動補正（度数法）
   baseHeadingOffset?: number; // キャリブレーションで算出した alpha→真北 の補正値（度数法）
   manualPitchOffset?: number; // 手動ピッチ補正（度数法）: 正=見上げ方向
+  isAdjusting?: boolean; // 角度調整ボタン押下中フラグ：trueのとき高速smoothingに切り替え
 }
 
 // 上ボタンで見上げる方向になるよう符号を調整する定数。
 // 実機で逆になる場合は -1 に変更する。
 const PITCH_SIGN = -1;
+
+// 角度調整ボタン押下中に使用する高速 smoothing 値。
+// 通常の smoothing (0.1) はセンサーノイズを滑らかにするが、
+// 手動操作中はボタンの 80ms ステップを素早く追従させるため 0.5 に切り替える。
+// 0.5 なら 80ms (≒4.8フレーム) 内に目標角の約96%に到達し、
+// 離した瞬間の残留ドリフトも体感できないレベル（約0.1°）に収まる。
+const ADJUSTING_SMOOTHING = 0.5;
 
 export default function OrientationCamera({
   deviceOrientation,
@@ -25,6 +33,7 @@ export default function OrientationCamera({
   manualHeadingOffset = 0,
   baseHeadingOffset = 0,
   manualPitchOffset = 0,
+  isAdjusting = false,
 }: OrientationCameraProps) {
   const { camera } = useThree();
 
@@ -74,6 +83,9 @@ export default function OrientationCamera({
     const gammaRad = THREE.MathUtils.degToRad(gamma);
     const orientRad = screenOrientation.current;
 
+    // 角度調整ボタン押下中は高速smoothingに切り替え、操作のキビキビ感を向上させる
+    const effectiveSmoothing = isAdjusting ? ADJUSTING_SMOOTHING : smoothing;
+
     if (arMode) {
       // DeviceOrientationControls の標準的な Quaternion 計算ロジック
       // 順序 YXZ: 'ZXY' for the device orientation
@@ -88,11 +100,11 @@ export default function OrientationCamera({
       q_final.current.multiply(q_screen.current);
 
       // 滑らかな補間
-      camera.quaternion.slerp(q_final.current, smoothing);
+      camera.quaternion.slerp(q_final.current, effectiveSmoothing);
     } else {
       // 非ARモード：シンプルな傾き表現
       euler.current.set(betaRad * 0.1, alphaRad * 0.1, 0, 'XYZ');
-      camera.quaternion.slerp(q_final.current.setFromEuler(euler.current), smoothing);
+      camera.quaternion.slerp(q_final.current.setFromEuler(euler.current), effectiveSmoothing);
     }
   });
 
